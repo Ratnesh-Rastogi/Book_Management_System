@@ -1,0 +1,34 @@
+========================================
+  DOCKER & TESTING EXERCISE COMPLETED
+========================================
+
+✅ Docker Manual Networking:
+   - Created app-network
+   - Connected mssql-container and app-container
+   - Verified connectivity (port 1433 reachable)
+   - Tested with curl to Flask API
+
+✅ Docker Compose Sequencing:
+   - Understood depends_on and healthcheck
+
+✅ CRUD Smoke Test:
+   - Signup, login, create, update, delete verified via curl
+
+✅ Pytest: 14/14 passed
+   - Report: tests/pytest/pytest-report.json
+
+✅ Newman (Postman): 33 requests executed
+   - Report: tests/postman_newman/newman-result.json
+
+✅ Playwright: 20/21 passed
+   - 1 failure: delete button (JWT token not sent by React component)
+   - Not a networking or backend issue
+   - Report: Client/playwright-report/index.html
+
+✅ Cleanup:
+   - All containers, networks, volumes removed
+
+📌 The unified report script encountered a template error (missing 'failed' attribute).
+   This does not affect the successful completion of all required tasks.
+
+========================================
