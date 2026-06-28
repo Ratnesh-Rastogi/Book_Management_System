@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+
+  # ── Microsoft SQL Server ──────────────────────────────────────────────────
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-20.04
+    container_name: mssql-container
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_PASSWORD:-YourStrong@Passw0rd}"
+      MSSQL_PID: Developer
+    volumes:
+      - mssql_data:/var/opt/mssql
+    networks:
+      - book-management-network
+    restart: unless-stopped
+    healthcheck:
+      test: >
+        /opt/mssql-tools/bin/sqlcmd
+        -S localhost 
+        -U sa 
+        -P "${MSSQL_PASSWORD:-YourStrong@Passw0rd}"
+        -Q "SELECT 1" 
+        -b 
+        -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Flask Backend ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    container_name: book-management-backend
+    ports:
+      - "5001:5001"
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: production
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-your-secret-key-change-in-production}"
+      MSSQL_SERVER: "mssql-container,1433"
+      MSSQL_DATABASE: "${MSSQL_DATABASE:-books_db}"
+      MSSQL_USERNAME: "${MSSQL_USERNAME:-sa}"
+      MSSQL_PASSWORD: "${MSSQL_PASSWORD:-YourStrong@Passw0rd}"
+      MSSQL_DRIVER: "ODBC Driver 17 for SQL Server"
+      MSSQL_TRUST_CERT: "yes"
+    depends_on:
+      mssql:
+        condition: service_healthy
+    networks:
+      - book-management-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ── React Frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./Client
+      dockerfile: Dockerfile
+    container_name: book-management-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: production
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - book-management-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+networks:
+  book-management-network:
+    driver: bridge
+
+volumes:
+  mssql_data:
+    driver: local
